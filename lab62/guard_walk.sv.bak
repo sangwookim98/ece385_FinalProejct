@@ -1,0 +1,525 @@
+module guard_walk ( input logic Reset, vga_clk,
+						  input [9:0] DrawX, DrawY, 
+						  input [9:0] GuardX, GuardY,
+						  
+						  input [2:0] direction_guard,
+						  
+						  // another stage: make another variable
+				
+						  output logic [3:0] g_redleft, g_redright, g_redup, g_reddown,
+													g_greenleft, g_greenright, g_greenup, g_greendown,
+													g_blueleft, g_blueright, g_blueup, g_bluedown
+);
+
+enum logic [5:0] { not_moving, g_upone, g_uptwo, g_upthree, g_upfour,
+						 g_downone, g_downtwo, g_downthree, g_downfour,
+						 g_leftone, g_lefttwo, g_leftthree, g_leftfour,
+						 g_rightone, g_righttwo, g_rightthree, g_rightfour} cur_state, next_state;
+						 
+						 
+reg [31:0] count;
+
+logic flag;
+				
+				
+logic [10:0] gdown_rom_address, gup_rom_address, gleft_rom_address, gright_rom_address;
+
+// other sprite motion animation
+logic [10:0] gdown2_rom_address, gup2_rom_address, gleft2_rom_address, gright2_rom_address;
+
+// rom address
+logic [4:0] gdown_rom_q, gup_rom_q, gleft_rom_q, gright_rom_q;
+
+// rom address for other motion
+logic [4:0] gdown2_rom_q, gup2_rom_q, gleft2_rom_q, gright2_rom_q;
+
+// palettes
+logic [3:0] gdpalette_red, gdpalette_green, gdpalette_blue,
+				gupalette_red, gupalette_green, gupalette_blue,
+				grpalette_red, grpalette_green, grpalette_blue,
+				glpalette_red, glpalette_green, glpalette_blue; 
+				
+logic [3:0] gd2palette_red, gd2palette_green, gd2palette_blue,
+				gu2palette_red, gu2palette_green, gu2palette_blue,
+				gr2palette_red, gr2palette_green, gr2palette_blue,
+				gl2palette_red, gl2palette_green, gl2palette_blue; 
+
+
+// Creates snake sprite
+// down - first motion
+snake_downred_rom snake_down_rom (
+	.clock   (vga_clk),
+	.address (gdown_rom_address),
+	.q       (gdown_rom_q)
+	
+);
+
+snake_downred_palette snake_down_palette (
+	.index (gdown_rom_q),
+	.red   (gdpalette_red),
+	.green (gdpalette_green),
+	.blue  (gdpalette_blue)
+);
+
+// down - second motion
+snake_down2_rom s2_down_rom (
+	.clock   (vga_clk),
+	.address (sdown2_rom_address),
+	.q       (sdown2_rom_q)
+);
+
+snake_down2_palette s2_down_palette (
+	.index (sdown2_rom_q),
+	.red   (sd2palette_red),
+	.green (sd2palette_green),
+	.blue  (sd2palette_blue)
+);
+
+// up - first motion
+snake_upred_rom snake_up_rom (
+	.clock   (vga_clk),
+	.address (sup_rom_address),
+	.q       (sup_rom_q)
+);
+
+snake_upred_palette snake_up_palette (
+	.index (sup_rom_q),
+	.red   (supalette_red),
+	.green (supalette_green),
+	.blue  (supalette_blue)
+);
+
+// up - second motion
+snake_up2_rom s2_up_rom (
+	.clock   (vga_clk),
+	.address (sup2_rom_address),
+	.q       (sup2_rom_q)
+);
+
+snake_up2_palette s2_up_palette (
+	.index (sup2_rom_q),
+	.red   (su2palette_red),
+	.green (su2palette_green),
+	.blue  (su2palette_blue)
+);
+
+// right - first motion
+snake_rightred_rom snake_right_rom (
+	.clock   (vga_clk),
+	.address (sright_rom_address),
+	.q       (sright_rom_q)
+);
+
+snake_rightred_palette snake_right_palette (
+	.index (sright_rom_q),
+	.red   (srpalette_red),
+	.green (srpalette_green),
+	.blue  (srpalette_blue)
+);
+
+// right - second motion
+snake_rightnew_rom s2_right_rom (
+	.clock   (vga_clk),
+	.address (sright2_rom_address),
+	.q       (sright2_rom_q)
+);
+
+snake_rightnew_palette s2_right_palette (
+	.index (sright2_rom_q),
+	.red   (sr2palette_red),
+	.green (sr2palette_green),
+	.blue  (sr2palette_blue)
+);
+
+
+// left - first motion
+snake_leftred_rom snake_left_rom (
+	.clock   (vga_clk),
+	.address (sleft_rom_address),
+	.q       (sleft_rom_q)
+);
+
+snake_leftred_palette snake_left_palette (
+	.index (sleft_rom_q),
+	.red   (slpalette_red),
+	.green (slpalette_green),
+	.blue  (slpalette_blue)
+);
+
+// left - second motion
+snake_leftnew_rom s2_left_rom (
+	.clock   (vga_clk),
+	.address (sleft2_rom_address),
+	.q       (sleft2_rom_q)
+);
+
+snake_leftnew_palette s2_left_palette (
+	.index (sleft2_rom_q),
+	.red   (sl2palette_red),
+	.green (sl2palette_green),
+	.blue  (sl2palette_blue)
+);
+				
+
+assign sdown_rom_address = ((DrawX - SnakeX) + (DrawY - SnakeY) * 21);
+assign sup_rom_address = ((DrawX - SnakeX) + (DrawY - SnakeY) * 21);
+assign sleft_rom_address = ((DrawX - SnakeX) + (DrawY - SnakeY) * 21);
+assign sright_rom_address = ((DrawX - SnakeX) + (DrawY - SnakeY) * 21);
+
+assign sdown2_rom_address = ((DrawX - SnakeX) + (DrawY - SnakeY) * 21);
+assign sup2_rom_address = ((DrawX - SnakeX) + (DrawY - SnakeY) * 21);
+assign sleft2_rom_address = ((DrawX - SnakeX) + (DrawY - SnakeY) * 21);
+assign sright2_rom_address = ((DrawX - SnakeX) + (DrawY - SnakeY) * 21);
+
+
+// similar to guard_control module set up
+always@(posedge vga_clk)
+begin
+	if(flag) 
+		count <= 0;
+	
+	else
+		count <= count + 1;
+end
+
+
+always_ff @ (posedge vga_clk or posedge Reset)
+begin
+	if (Reset)
+	begin
+		cur_state <= not_moving;
+		flag <= 1'b0;
+	end
+	else if (count > 1000000)
+	begin
+		cur_state <= next_state;
+		flag <= 1'b1;
+	end
+	
+	else
+		flag <= 1'b0;
+end	
+
+
+always_comb
+begin
+	// Maintain position at default state
+	next_state = cur_state;
+	
+	// default variable instantiations
+	// for left sprite 
+	s_redleft 	 = slpalette_red;
+	s_greenleft = slpalette_green;
+	s_blueleft  = slpalette_blue;
+	
+	// for right sprite
+	s_redright   = srpalette_red;
+	s_greenright = srpalette_green; 
+	s_blueright  = srpalette_blue;
+	
+	// for up sprite
+	s_redup 	 = supalette_red;
+	s_greenup = supalette_green; 
+	s_blueup  = supalette_blue;	
+	
+	// for down sprite
+	s_reddown 	= sdpalette_red;
+	s_greendown = sdpalette_green; 
+	s_bluedown  = sdpalette_blue;	
+
+	
+
+
+	unique case (cur_state)
+	not_moving: 
+		case(keycode)
+		
+		// left
+		8'h04 : begin	
+			next_state = s_leftone;
+		end
+		
+		// right
+		8'h07 : begin
+			next_state = s_rightone;
+		end
+		
+		// down	
+		8'h16 : begin
+			next_state = s_downone;
+		end
+		
+		// up 
+		8'h1A : begin
+			next_state = s_upone;
+		end	
+		
+		default: begin
+			next_state = not_moving;
+			
+		end
+	endcase
+	
+	// Left movement sprite: one -> two -> three -> four
+	s_leftone:
+		if (keycode == 8'h04)
+			next_state = s_lefttwo;
+			
+		else
+			next_state = not_moving;
+			
+	s_lefttwo:
+		if (keycode == 8'h04)
+			next_state = s_leftthree;
+			
+		else
+			next_state = not_moving;
+			
+	s_leftthree:
+		if (keycode == 8'h04)
+			next_state = s_leftfour;
+			
+		else
+			next_state = not_moving;
+			
+	s_leftfour:
+		if (keycode == 8'h04)
+			next_state = s_leftone;
+			
+		else
+			next_state = not_moving;
+	
+	// Right movement sprite: one -> two -> three -> four
+	s_rightone:
+		if (keycode == 8'h07)
+			next_state = s_righttwo;
+			
+		else
+			next_state = not_moving;
+			
+	s_righttwo:
+		if (keycode == 8'h07)
+			next_state = s_rightthree;
+			
+		else
+			next_state = not_moving;
+			
+	s_rightthree:
+		if (keycode == 8'h07)
+			next_state = s_rightfour;
+			
+		else
+			next_state = not_moving;
+			
+	s_rightfour:
+		if (keycode == 8'h07)
+			next_state = s_rightone;
+			
+		else
+			next_state = not_moving;
+			
+	// Up movement sprite: one -> two -> three -> four
+	s_upone:
+		if (keycode == 8'h1A)
+			next_state = s_uptwo;
+			
+		else
+			next_state = not_moving;
+			
+	s_uptwo:
+		if (keycode == 8'h1A)
+			next_state = s_upthree;
+			
+		else
+			next_state = not_moving;
+			
+	s_upthree:
+		if (keycode == 8'h1A)
+			next_state = s_upfour;
+			
+		else
+			next_state = not_moving;
+			
+	s_upfour:
+		if (keycode == 8'h1A)
+			next_state = s_upone;
+			
+		else
+			next_state = not_moving;
+			
+			
+			
+	// Down movement sprite: one -> two -> three -> four
+	s_downone:
+		if (keycode == 8'h16)
+			next_state = s_downtwo;
+			
+		else
+			next_state = not_moving;
+			
+	s_downtwo:
+		if (keycode == 8'h16)
+			next_state = s_downthree;
+			
+		else
+			next_state = not_moving;
+			
+	s_downthree:
+		if (keycode == 8'h16)
+			next_state = s_downfour;
+			
+		else
+			next_state = not_moving;
+			
+	s_downfour:
+		if (keycode == 8'h16)
+			next_state = s_downone;
+			
+		else
+			next_state = not_moving;
+	endcase
+	
+	case(cur_state)
+	
+	// Stationary one
+	not_moving:
+		begin
+			s_reddown = sdpalette_red;
+			s_greendown = sdpalette_green;
+			s_bluedown = sdpalette_blue;
+		end
+	
+	// add first motion palette RGB
+	s_leftone:
+		begin
+		s_redleft  = slpalette_red;
+		s_greenleft = slpalette_green;
+		s_blueleft = slpalette_blue;
+		end
+		
+	s_lefttwo:
+		begin
+		s_redleft  = slpalette_red;
+		s_greenleft = slpalette_green;
+		s_blueleft = slpalette_blue;
+		end
+	
+   // add second motion palette RGB	
+	s_leftthree:
+		begin
+		s_redleft  = sl2palette_red;
+		s_greenleft = sl2palette_green;
+		s_blueleft = sl2palette_blue;
+		end
+		
+	s_leftfour:
+		begin
+		s_redleft  = sl2palette_red;
+		s_greenleft = sl2palette_green;
+		s_blueleft = sl2palette_blue;
+		end
+		
+	// add first motion palette RGB		
+	s_rightone:
+		begin
+		s_redright = srpalette_red;
+		s_greenright = srpalette_green;
+		s_blueright = srpalette_blue;
+		end
+		
+	s_righttwo:
+		begin
+		s_redright = srpalette_red;
+		s_greenright = srpalette_green;
+		s_blueright = srpalette_blue;
+		end
+		
+   // add second motion palette RGB
+	s_rightthree:
+		begin
+		s_redright = sr2palette_red;
+		s_greenright = sr2palette_green;
+		s_blueright = sr2palette_blue;
+		end
+		
+	s_rightfour:
+		begin
+		s_redright = sr2palette_red;
+		s_greenright = sr2palette_green;
+		s_blueright = sr2palette_blue;
+		end
+		
+	// add first motion palette RGB	
+	s_upone:
+		begin
+		s_redup = supalette_red;
+		s_greenup = supalette_green;
+		s_blueup = supalette_blue;
+		end
+		
+	s_uptwo:
+		begin
+		s_redup = supalette_red;
+		s_greenup = supalette_green;
+		s_blueup = supalette_blue;
+		end
+
+   // add second motion palette RGB		
+	s_upthree:
+		begin
+		s_redup = su2palette_red;
+		s_greenup = su2palette_green;
+		s_blueup = su2palette_blue;
+		end
+	
+	s_upfour:
+		begin
+		s_redup = su2palette_red;
+		s_greenup = su2palette_green;
+		s_blueup = su2palette_blue;
+		end
+
+	// add first motion palette RGB		
+	s_downone:
+		begin
+		s_reddown = sdpalette_red;
+		s_greendown = sdpalette_green;
+		s_bluedown = sdpalette_blue;
+		end
+		
+	s_downtwo:
+		begin
+		s_reddown = sdpalette_red;
+		s_greendown = sdpalette_green;
+		s_bluedown = sdpalette_blue;
+		end
+		
+   // add second motion palette RGB	
+	s_downthree:
+		begin
+		s_reddown = sd2palette_red;
+		s_greendown = sd2palette_green;
+		s_bluedown = sd2palette_blue;
+		end
+		
+	s_downfour:
+		begin
+		s_reddown = sd2palette_red;
+		s_greendown = sd2palette_green;
+		s_bluedown = sd2palette_blue;
+		end
+	
+	endcase
+	
+
+	
+
+	
+	
+end
+
+endmodule
+
+
+
+

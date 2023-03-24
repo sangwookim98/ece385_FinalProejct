@@ -1,0 +1,6 @@
+RGB values
+1st - 000
+2nd - ECB871
+3rd - 1082C1
+4th - 999AAE
+

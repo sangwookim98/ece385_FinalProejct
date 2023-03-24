@@ -1,0 +1,46 @@
+module  guard ( input 		  Reset, frame_clk,
+					input [7:0]   keycode,
+
+					output [9:0]  GuardX, GuardY, GuardS, GuardSY);
+    
+    logic [9:0] Guard_X_Pos, Guard_X_Motion, Guard_Y_Pos, Guard_Y_Motion, Guard_Size, Guard_SizeY;
+	 
+	 // for the guard (test)
+	 parameter [9:0] Guard_X_Center=400;  // Center position on the X axis
+    parameter [9:0] Guard_Y_Center=240;  // Center position on the Y axis
+    parameter [9:0] Guard_X_Min=4;       // Leftmost point on the X axis
+    parameter [9:0] Guard_X_Max=639;     // Rightmost point on the X axis
+    parameter [9:0] Guard_Y_Min=30;       // Topmost point on the Y axis
+    parameter [9:0] Guard_Y_Max=479;     // Bottommost point on the Y axis
+    parameter [9:0] Guard_X_Step=1;      // Step size on the X axis
+    parameter [9:0] Guard_Y_Step=1;      // Step size on the Y axis
+
+	 assign Guard_size = 21;
+	 assign Guard_SizeY = 45;
+	 
+    always_ff @ (posedge Reset or posedge frame_clk )
+    begin: Move_Ball
+        if (Reset)  // Asynchronous Reset
+		  begin 
+            Guard_Y_Motion <= 10'd0; 
+				Guard_X_Motion <= 10'd0; 
+				Guard_Y_Pos <= Guard_Y_Center;
+				Guard_X_Pos <= Guard_X_Center;	
+        end
+
+					  
+		else		 
+		begin
+				  Guard_Y_Pos <= Guard_Y_Pos;  // Ball is somewhere in the middle, don't bounce, just keep moving 
+				  Guard_X_Pos <= Guard_X_Pos;  // Ball is somewhere in the middle, don't bounce, just keep moving			
+		end  
+//    end
+       
+	 assign GuardX = Guard_X_Pos;
+	 assign GuardY = Guard_Y_Pos;
+	 assign GuardS = Guard_Size;
+	 assign GuardSY = Guard_SizeY;
+
+
+	
+endmodule

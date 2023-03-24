@@ -1,0 +1,36 @@
+//module guard_control (input logic Reset, Clk,
+//							 input [9:0] vision_startX, vision_startY, vision_endX, vision_endY,
+//							 input [9:0] GuardX, GuardY, GuardS, GuardSY,
+//					
+//							 output logic game_over 			
+//);
+//
+//
+//logic [9:0] len_x_vision, len_y_vision, vision_field;
+//
+//logic detected, restart;
+//
+//// checking if snake is within the vision of the guard
+//always_comb
+//begin
+//	if ((SnakeX >= vision_startX) && (SnakeX <= vision_endX) && (SnakeY >= vision_startY) && (SnakeY <= vision_endY))
+//		// Snake in vision
+//		detected = 1;
+//	
+//	else
+//		detected = 0;
+//		
+//end
+//
+//always_ff @(posedge Clk)
+//begin: Snake_detected
+//	if (detected == 1)
+//	begin
+//		Reset <= 1;
+//		game_over <= 1;
+//	end
+//
+//end
+//
+//
+//endmodule

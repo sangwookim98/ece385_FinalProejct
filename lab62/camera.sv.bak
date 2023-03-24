@@ -1,0 +1,178 @@
+module  camera ( input 		  Reset, frame_clk,
+					input [7:0]   keycode,
+					input [9:0]   vision_startX, vision_endX, vision_startY, vision_endY,
+					output [2:0] direction_snake,
+               output [9:0]  BallX, BallY, BallS, BallSY);
+    
+    logic [9:0] Ball_X_Pos, Ball_X_Motion, Ball_Y_Pos, Ball_Y_Motion, Ball_Size, Ball_SizeY;
+	 logic detected;
+	 
+	 // for the player sprite
+    parameter [9:0] Ball_X_Center=320;  // Center position on the X axis
+    parameter [9:0] Ball_Y_Center=240;  // Center position on the Y axis
+    parameter [9:0] Ball_X_Min=10;       // Leftmost point on the X axis put 4 in eceb monitor, 10 in my house
+    parameter [9:0] Ball_X_Max=639;     // Rightmost point on the X axis
+    parameter [9:0] Ball_Y_Min=30;       // Topmost point on the Y axis
+    parameter [9:0] Ball_Y_Max=479;     // Bottommost point on the Y axis
+    parameter [9:0] Ball_X_Step=1;      // Step size on the X axis
+    parameter [9:0] Ball_Y_Step=1;      // Step size on the Y axis
+	 
+	 parameter  [9:0] Wall_Y_Min=150;		 // wall Y coordinate
+	 
+	 // for the guard (test)
+//	 	parameter [9:0] Guard_X_Center=320;  // Center position on the X axis
+//    parameter [9:0] Guard_Y_Center=240;  // Center position on the Y axis
+//    parameter [9:0] Guard_X_Min=4;       // Leftmost point on the X axis
+//    parameter [9:0] Guard_X_Max=639;     // Rightmost point on the X axis
+//    parameter [9:0] Guard_Y_Min=30;       // Topmost point on the Y axis
+//    parameter [9:0] Guard_Y_Max=479;     // Bottommost point on the Y axis
+//    parameter [9:0] Guard_X_Step=1;      // Step size on the X axis
+//    parameter [9:0] Guard_Y_Step=1;      // Step size on the Y axis
+	 
+	 
+
+    assign Ball_Size = 21;  // x length
+    assign Ball_SizeY = 45; // y length
+	 
+//	 assign Guard_size = 21;
+//	 assign Guard_SizeY = 45;
+	 
+	 // Sprite movement with keycode
+    always_ff @ (posedge Reset or posedge frame_clk )
+    begin: Move_Ball
+        if (Reset)  // Asynchronous Reset
+		  begin 
+            Ball_Y_Motion <= 10'd0; //Ball_Y_Step;
+				Ball_X_Motion <= 10'd0; //Ball_X_Step;
+				Ball_Y_Pos <= Ball_Y_Center;
+				Ball_X_Pos <= Ball_X_Center;
+				
+				// Guard
+//				Guard_Y_Pos <= Guard_Y_Center;
+//				Guard_X_Pos <= Guard_X_Center;
+        end
+        
+		  else if (detected == 1'b1)
+		  begin
+				Ball_Y_Motion <= 10'd0; //Ball_Y_Step;
+				Ball_X_Motion <= 10'd0; //Ball_X_Step;
+				Ball_Y_Pos <= Ball_Y_Center;
+				Ball_X_Pos <= Ball_X_Center;
+		  end
+					  
+		else		 
+		begin
+				  Ball_Y_Pos <= Ball_Y_Pos;  // Ball is somewhere in the middle, don't bounce, just keep moving 
+				  Ball_X_Pos <= Ball_X_Pos;  // Ball is somewhere in the middle, don't bounce, just keep moving
+					  
+					case (keycode)
+									 
+					8'h04 : begin        // Left
+							
+							// wall
+							direction_snake = 3'b000;
+				 			if ( (Ball_X_Pos - Ball_Size) <= Ball_X_Min )
+							begin// Ball is at the Left edge
+//								Ball_X_Motion <= Ball_X_Step;
+					  			Ball_X_Motion <= 1'b0;	
+					  			Ball_X_Pos <= (Ball_X_Pos + Ball_X_Motion);
+					 		end
+					
+							else
+							begin
+//								Ball_X_Motion <= Ball_X_Step;
+								Ball_X_Motion <= -4;//A
+								Ball_Y_Motion<= 0;
+								Ball_Y_Pos <= (Ball_Y_Pos + Ball_Y_Motion);
+								Ball_X_Pos <= (Ball_X_Pos + Ball_X_Motion);
+							end
+						end
+					        
+					8'h07 : begin			// Right
+							direction_snake = 3'b001;							
+							if ( (Ball_X_Pos + Ball_Size) >= Ball_X_Max )
+							begin// Ball is at the Right edge
+								Ball_X_Motion <= 1'b0;  // 2's complement.
+								Ball_X_Pos <= (Ball_X_Pos + Ball_X_Motion);
+				 			end  
+							  
+							  else
+							  begin
+								Ball_X_Motion <= 4;//D
+								Ball_Y_Motion <= 0;
+								Ball_Y_Pos <= (Ball_Y_Pos + Ball_Y_Motion);
+								Ball_X_Pos <= (Ball_X_Pos + Ball_X_Motion);
+							  end
+							 end
+
+							  
+					8'h16 : begin			// Down
+							direction_snake = 3'b010;
+					       if ( (Ball_Y_Pos + Ball_SizeY) >= Ball_Y_Max ) 
+				 			 begin
+//									Ball is at the bottom edge
+//									Ball_Y_Motion <= (~ (Ball_Y_Step) + 1'b1);  // 2's complement.
+									Ball_Y_Motion<= 1'b0;
+									Ball_Y_Pos <= (Ball_Y_Pos + Ball_Y_Motion);
+							 end 
+							 
+							 else
+								begin
+								Ball_Y_Motion <= 4;//S
+								Ball_X_Motion <= 0;
+								Ball_Y_Pos <= (Ball_Y_Pos + Ball_Y_Motion);
+								Ball_X_Pos <= (Ball_X_Pos + Ball_X_Motion);
+					
+							 end
+						 end
+						 
+
+						 
+						 
+					8'h1A : begin			// Up
+							direction_snake = 3'b011;
+							  if ( (Ball_Y_Pos - Ball_SizeY) <= Ball_Y_Min ) 
+				 			  begin
+//									Ball is at the top edge
+//									Ball_Y_Motion <= (~ (Ball_Y_Step) + 1'b1);  // 2's complement.
+									Ball_Y_Motion<= 1'b0;
+									Ball_Y_Pos <= (Ball_Y_Pos - Ball_Y_Motion);
+								end
+							 else
+								begin
+								Ball_Y_Motion <= -4;//W
+								Ball_X_Motion <= 0;
+								Ball_Y_Pos <= (Ball_Y_Pos + Ball_Y_Motion);
+								Ball_X_Pos <= (Ball_X_Pos + Ball_X_Motion);
+								end 
+							 end	  
+					default: ;
+			   endcase
+					end 
+
+				 
+
+				 
+//				 Ball_Y_Pos <= (Ball_Y_Pos + Ball_Y_Motion);  // Update ball position
+//				 Ball_X_Pos <= (Ball_X_Pos + Ball_X_Motion);
+		
+		end  
+//    end
+
+always_comb
+begin
+	if ((BallX >= vision_startX) && (BallX <= vision_endX) && (BallY >= vision_startY) && (BallY <= vision_endY))
+		// Snake in vision
+		detected = 1;
+	
+	else
+		detected = 0;	
+end
+       
+    assign BallX = Ball_X_Pos;  
+    assign BallY = Ball_Y_Pos;
+    assign BallS = Ball_Size;
+	 assign BallSY = Ball_SizeY;
+
+	
+endmodule

@@ -1,0 +1,100 @@
+module camera_control (input logic Reset, Clk,
+							 				
+							 output [1:0] direction_cam 			
+);
+
+logic flag;
+
+reg[31:0] count;
+
+// State names
+enum logic [4:0] {start, left_cam, right_cam, hold_1, hold_2} cur_state, next_state;
+
+// direction:
+//00 : left
+//01 : right
+//10 : stop
+
+//100 : no movement
+
+
+always@(posedge Clk)
+begin
+	if(flag) 
+		count <= 0;
+	
+	else
+		count <= count + 1;
+end
+
+
+always_ff @ (posedge Clk or posedge Reset)
+begin
+	if (Reset)
+	begin
+		cur_state <= right_cam;
+		flag <= 1'b0;
+	end
+	else if (count > 100000050)
+	begin
+		cur_state <= next_state;
+		flag <= 1'b1;
+	end
+	
+	else
+		flag <= 1'b0;
+end		
+
+
+always_comb
+begin
+	direction_guard = 2'b10;
+   next_state = cur_state;
+	
+	unique case (cur_state)
+	start:
+		next_state = right_cam;
+			
+	up_guard:
+		next_state = hold_1;
+		
+	hold_1:
+		next_state = left_cam;
+					
+	right_guard:
+		next_state = hold_2;
+		
+	hold_2:
+		next_state = right_cam;
+
+			
+	default :
+		next_state = right_cam;
+
+	endcase
+
+case (cur_state)
+	start:	
+		direction_guard = 2'b10;
+	
+	right_guard:
+		direction_guard = 2'b00;
+		
+	hold_1:
+		direction_guard = 2'b10;
+		
+	left_cam:
+		direction_guard = 2'b01;
+		
+	hold_2:
+		direction_guard = 2'b10;
+		
+
+	default :
+		direction_guard = 2'b10;
+
+	
+	endcase
+end
+	
+endmodule
